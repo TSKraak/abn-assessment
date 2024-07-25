@@ -26,7 +26,9 @@ const data = [
 
 const fetchData = async () => {
   const session = driver.session();
+
   try {
+    // Request to neo4j database to fetch nodes and children
     const result = await session.executeRead(tx =>
       tx.run(`
         MATCH (n:Node)
@@ -35,6 +37,7 @@ const fetchData = async () => {
       `)
     );
 
+    // Sorting and the nodes
     const nodes = result.records.map(record => {
       const node = record.get("n").properties;
       const children = record
@@ -63,8 +66,10 @@ const buildHierarchy = nodes => {
   // Add corresponding children to root nodes
   nodes.forEach(({ node, children }) => {
     const currentNode = nodeMap.get(node.name);
+
     children.forEach(child => {
       const childNode = nodeMap.get(child.name);
+
       if (childNode) {
         currentNode.children.push(childNode);
       }
@@ -76,6 +81,7 @@ const buildHierarchy = nodes => {
 
   // Remove root nodes which are children of other nodes
   const rootNodes = [];
+
   nodes.forEach(({ node }) => {
     if (!nodes.some(({ children }) => children.some(child => child.name === node.name))) {
       rootNodes.push(nodeMap.get(node.name));
@@ -89,19 +95,19 @@ app.post("/populate", async (req, res) => {
   try {
     await session.executeWrite(tx => tx.run("MATCH (n) DETACH DELETE n"));
 
-    for (const item of data) {
+    for (const node of data) {
       await session.executeWrite(tx =>
         tx.run("CREATE (n:Node {name: $name, description: $description})", {
-          name: item.name,
-          description: item.description
+          name: node.name,
+          description: node.description
         })
       );
-
-      if (item.parent) {
+      
+      if (node.parent) {
         await session.executeWrite(tx =>
           tx.run("MATCH (a:Node {name: $parent}), (b:Node {name: $name}) CREATE (a)-[:HAS_CHILD]->(b)", {
-            parent: item.parent,
-            name: item.name
+            parent: node.parent,
+            name: node.name
           })
         );
       }

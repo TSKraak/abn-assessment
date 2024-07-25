@@ -37,7 +37,6 @@ export default {
   },
   methods: {
     showDescription(node) {
-      console.log(node === this.selectedNode);
       this.$emit("show-description", node);
     }
   }
